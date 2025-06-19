@@ -1,23 +1,14 @@
 {
-  "version": 2,
-  "builds": [
-    { 
-      "src": "api/**/*.ts", 
-      "use": "@vercel/node",
-      "config": {
-        "includeFiles": ["lib/**/*"]
-      }
-    }
-  ],
-  "routes": [
-    { 
-      "src": "/(.*)", 
-      "dest": "/api/webhooks" 
-    }
-  ],
   "functions": {
     "api/webhooks.ts": {
-      "maxDuration": 30
+      "maxDuration": 30,
+      "includeFiles": "lib/**/*"
     }
-  }
+  },
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/api/webhooks"
+    }
+  ]
 }
