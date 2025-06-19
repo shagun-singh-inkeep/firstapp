@@ -1,6 +1,12 @@
+import type { Messages, OpenAIConversation, UserProperties } from '@inkeep/inkeep-analytics/models/components';
 /**
- * Normalizes and logs a conversation to Inkeep Analytics.
- * Reads the webIntegrationKey from the INKEEP_ANALYTICS_KEY env var.
- * @param payload - the raw conversation payload
+ * Logs an OpenAI-compatible conversation to Inkeep Analytics.
+ * Requires AUTO_RESPONDER_INKEEP_API_KEY environment variable for authentication.
  */
-export declare function logToInkeepAnalytics(payload: any): Promise<void>;
+export declare function logToInkeepAnalytics({ messagesToLogToAnalytics, properties, userProperties, }: {
+    messagesToLogToAnalytics: Messages[];
+    properties?: Record<string, any> | null;
+    userProperties?: UserProperties | null;
+}): Promise<(OpenAIConversation & {
+    type: 'openai';
+}) | undefined>;

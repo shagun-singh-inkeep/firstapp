@@ -45,62 +45,57 @@
 //     return undefined;
 //   }
 // }
-import { InkeepAnalytics } from "@inkeep/inkeep-analytics";
-
-// Initialize the Analytics SDK client
-const inkeepAnalytics = new InkeepAnalytics({
-  serverURL: process.env.INKEEP_ANALYTICS_URL || "https://api.analytics.inkeep.com",
-});
+import { InkeepAnalytics } from '@inkeep/inkeep-analytics';
+import type { CreateOpenAIConversation, Messages, OpenAIConversation, UserProperties } from '@inkeep/inkeep-analytics/models/components';
 
 /**
- * Normalizes and logs a conversation to Inkeep Analytics.
- * Reads the webIntegrationKey from the INKEEP_ANALYTICS_KEY env var.
- * @param payload - the raw conversation payload
+ * Logs an OpenAI-compatible conversation to Inkeep Analytics.
+ * Requires AUTO_RESPONDER_INKEEP_API_KEY environment variable for authentication.
  */
-export async function logToInkeepAnalytics(payload: any): Promise<void> {
-  const integrationKey = process.env.INKEEP_ANALYTICS_KEY;
-  if (!integrationKey) {
-    console.error("Missing INKEEP_ANALYTICS_KEY env var");
-    return;
+export async function logToInkeepAnalytics({
+  messagesToLogToAnalytics,
+  properties,
+  userProperties,
+}: {
+  messagesToLogToAnalytics: Messages[];
+  properties?: Record<string, any> | null;
+  userProperties?: UserProperties | null;
+}): Promise<(OpenAIConversation & { type: 'openai' }) | undefined> {
+  const apiIntegrationKey = process.env.INKEEP_API_KEY;
+  if (!apiIntegrationKey) {
+    console.error('Missing AUTO_RESPONDER_INKEEP_API_KEY env var');
+    return undefined;
   }
 
-  // Force conversation type to support_ticket
-  const normalizedType = "support_ticket" as const;
+  const analytics = new InkeepAnalytics({ apiIntegrationKey });
 
-  // Normalize userProperties.userType to lowercase 'user' | 'member'
-  const normalizedUserType =
-    (payload.userProperties?.userType || "user").toLowerCase();
-
-  // Ensure every message uses the same conversation type
-  const normalizedMessages = (payload.messages || []).map((m: any) => ({
-    ...m,
-    type: normalizedType,
+  // Normalize each message to use the 'openai' type
+  const normalizedMessages = messagesToLogToAnalytics.map((msg) => ({
+    ...msg,
+    type: 'openai' as const,
   }));
 
-  // Build the mapped payload
-  const mappedPayload = {
-    ...payload,
-    type: normalizedType,
-    userProperties: {
-      ...(payload.userProperties || {}),
-      userType: normalizedUserType,
-    },
-    messages: normalizedMessages,
+  // Lowercase userType to match enum
+  const normalizedUserType = userProperties?.userType?.toLowerCase() as UserProperties['userType'];
+
+  const payload: CreateOpenAIConversation = {
+    type: 'openai',
+    messages: normalizedMessages as Messages[],
+    properties: properties ?? undefined,
+    userProperties: userProperties
+      ? { ...userProperties, userType: normalizedUserType }
+      : undefined,
   };
 
   try {
-    // Log the conversation (upsert semantics)
-    await inkeepAnalytics.conversations.log(
-      { webIntegrationKey: integrationKey },
-      mappedPayload
+    const loggedConversation = await analytics.conversations.log(
+      { apiIntegrationKey },
+      payload
     );
-    console.log(
-      `✅ Logged conversation ${mappedPayload.id} as ${normalizedType}`
-    );
+    return loggedConversation as OpenAIConversation & { type: 'support_ticket' };
   } catch (err) {
-    console.error(
-      "Error logging conversation to Inkeep Analytics:",
-      err
-    );
+    console.error('Error logging conversation to Inkeep Analytics:', err);
+    return undefined;
   }
 }
+
