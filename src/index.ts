@@ -2,7 +2,7 @@ import { Probot, Context } from "probot";
 import * as dotenv from "dotenv";
 import { createOpenAI } from "@ai-sdk/openai";
 //import { createOpenAI } from "@inkeep/openai";
-import { Client, cacheExchange, fetchExchange } from '@urql/core';
+//import { Client, cacheExchange, fetchExchange } from '@urql/core';
 import { generateText } from "ai";
 import {
   ProvideAIAnnotationsToolSchema,
@@ -12,66 +12,66 @@ import type { Message } from "ai";
 import type { Messages, UserProperties } from '@inkeep/inkeep-analytics/models/components';
 import { logToInkeepAnalytics } from './logToInkeepAnalytics';
 
-dotenv.config();
-const graphqlClient = new Client({
-  url: process.env.GRAPHQL_ENDPOINT ?? (() => { throw new Error("GRAPHQL_ENDPOINT environment variable is not set"); })(),
-  exchanges: [cacheExchange, fetchExchange],
-  fetchOptions: () => ({
-    headers: {
-      'Authorization': `Bearer ${process.env.GRAPHQL_API_TOKEN}`,
-      'Content-Type': 'application/json',
-    },
-  }),
-});
-async function fetchIntegrationApiKey(installationId: number): Promise<string> {
-  // Ensure we have an admin-level GraphQL token configured
-  const adminToken = process.env.INKEEP_GRAPHQL_ADMIN_TOKEN;
-  if (!adminToken) {
-    throw new Error('Missing INKEEP_GRAPHQL_ADMIN_TOKEN environment variable');
-  }
+ dotenv.config();
+// const graphqlClient = new Client({
+//   url: process.env.GRAPHQL_ENDPOINT ?? (() => { throw new Error("GRAPHQL_ENDPOINT environment variable is not set"); })(),
+//   exchanges: [cacheExchange, fetchExchange],
+//   fetchOptions: () => ({
+//     headers: {
+//       'Authorization': `Bearer ${process.env.GRAPHQL_API_TOKEN}`,
+//       'Content-Type': 'application/json',
+//     },
+//   }),
+// });
+// async function fetchIntegrationApiKey(installationId: number): Promise<string> {
+//   // Ensure we have an admin-level GraphQL token configured
+//   const adminToken = process.env.INKEEP_GRAPHQL_ADMIN_TOKEN;
+//   if (!adminToken) {
+//     throw new Error('Missing INKEEP_GRAPHQL_ADMIN_TOKEN environment variable');
+//   }
 
   // Execute the query with the admin token in the Authorization header
-  const response = await graphqlClient
-    .query(
-      GET_GITHUB_APP_INTEGRATION_SETTINGS,
-      { installationId: installationId.toString() },
-      {
-        // Override fetchOptions per request
-        fetchOptions: {
-          headers: {
-            Authorization: `Bearer ${adminToken}`,
-          },
-        },
-      }
-    )
-    .toPromise();
+//   const response = await graphqlClient
+//     .query(
+//       GET_GITHUB_APP_INTEGRATION_SETTINGS,
+//       { installationId: installationId.toString() },
+//       {
+//         // Override fetchOptions per request
+//         fetchOptions: {
+//           headers: {
+//             Authorization: `Bearer ${adminToken}`,
+//           },
+//         },
+//       }
+//     )
+//     .toPromise();
 
-  // Handle GraphQL authorization errors explicitly
-  if (response.error) {
-    const graphQLError = response.error.graphQLErrors?.[0]?.message;
-    if (graphQLError?.includes('Not authorized')) {
-      console.error('🚫 Unauthorized: check INKEEP_GRAPHQL_ADMIN_TOKEN permissions');
-      throw new Error('GraphQL unauthorized: insufficient permissions');
-    }
-    console.error('Error fetching integration settings:', response.error);
-    throw new Error(response.error.message);
-  }
+//   // Handle GraphQL authorization errors explicitly
+//   if (response.error) {
+//     const graphQLError = response.error.graphQLErrors?.[0]?.message;
+//     if (graphQLError?.includes('Not authorized')) {
+//       console.error('🚫 Unauthorized: check INKEEP_GRAPHQL_ADMIN_TOKEN permissions');
+//       throw new Error('GraphQL unauthorized: insufficient permissions');
+//     }
+//     console.error('Error fetching integration settings:', response.error);
+//     throw new Error(response.error.message);
+//   }
 
-  const apiKey = response.data?.gitHubAppIntegrationSettings?.integration?.apiKey;
-  if (!apiKey) {
-    throw new Error('API key not found in GraphQL response');
-  }
-  return apiKey;
-}
-const GET_GITHUB_APP_INTEGRATION_SETTINGS = `
-  query GetGitHubAppIntegrationSettings($installationId: ID!) {
-    gitHubAppIntegrationSettings(input: { installationId: $installationId }) {
-      integration {
-        apiKey
-      }
-    }
-  }
-`;
+//   const apiKey = response.data?.gitHubAppIntegrationSettings?.integration?.apiKey;
+//   if (!apiKey) {
+//     throw new Error('API key not found in GraphQL response');
+//   }
+//   return apiKey;
+// }
+// const GET_GITHUB_APP_INTEGRATION_SETTINGS = `
+//   query GetGitHubAppIntegrationSettings($installationId: ID!) {
+//     gitHubAppIntegrationSettings(input: { installationId: $installationId }) {
+//       integration {
+//         apiKey
+//       }
+//     }
+//   }
+// `;
 // const GET_USER_BY_INSTALLATION_ID = `
 //   query GetUserByInstallationId($installationId: ID!) {
 //     userByInstallationId(installationId: $installationId) {
@@ -159,11 +159,11 @@ const GET_GITHUB_APP_INTEGRATION_SETTINGS = `
 // }
 
 export default (app: Probot) => {
-  // const inkeepModel = 'inkeep-qa-expert';
-  // const openai = createOpenAI({
-  //   apiKey: process.env.INKEEP_API_KEY,
-  //   baseURL: 'https://api.inkeep.com/v1'
-  // });
+  const inkeepModel = 'inkeep-qa-expert';
+  const openai = createOpenAI({
+    apiKey: process.env.INKEEP_API_KEY,
+    baseURL: 'https://api.inkeep.com/v1'
+  });
 
   // Dashboard-driven confidence filter: 'all' | 'somewhat_confident' | 'very_confident'
   const confidenceFilter = 'very_confident';
@@ -203,12 +203,12 @@ You are a helpful AI assistant responding to GitHub issues. Your goal is to prov
   if (installationId === undefined) {
     throw new Error("Installation ID is undefined in the event payload.");
   }
-  const inkeepApiKey = await fetchIntegrationApiKey(installationId);
-  const inkeepModel = 'inkeep-qa-expert';
-  const openai = createOpenAI({
-      apiKey: inkeepApiKey,
-      baseURL: 'https://api.inkeep.com/v1'
-    });
+  // const inkeepApiKey = await fetchIntegrationApiKey(installationId);
+  // const inkeepModel = 'inkeep-qa-expert';
+  // const openai = createOpenAI({
+  //     apiKey: inkeepApiKey,
+  //     baseURL: 'https://api.inkeep.com/v1'
+  //   });
       
 
       // Fallback to environment variable if no user data found
@@ -234,6 +234,7 @@ You are a helpful AI assistant responding to GitHub issues. Your goal is to prov
 
       // 4) Log the user's question
       messagesToLogToAnalytics.push({ content: fullQuestion, role: 'user' });
+      
 
       // 5) Call the QA routine
       const messages: Message[] = [
@@ -256,7 +257,17 @@ You are a helpful AI assistant responding to GitHub issues. Your goal is to prov
       const explanation = aiAnnotations?.explanation ?? '';
       console.log(`🎯 Issue #${number} confidence level: ${confidence}`);
 
-      // 7) Determine whether to respond based on dashboard filter
+      // 7) Extract source links
+      const links = toolCalls.find(tc => tc.toolName === 'provideLinks')?.args;
+      let sourcesSection = '';
+      if (links?.links && Array.isArray(links.links) && links.links.length > 0) {
+        sourcesSection = `
+
+📚 **Sources:**
+${links.links.map((link: any, index: number) => `${index + 1}. [${link.title || link.url}](${link.url})`).join('\n')}`;
+      }
+
+      // 8) Determine whether to respond based on dashboard filter
       let shouldRespond: boolean;
       shouldRespond = confidence === 'very_confident';
       if (!shouldRespond) {
@@ -266,14 +277,24 @@ You are a helpful AI assistant responding to GitHub issues. Your goal is to prov
           messagesToLogToAnalytics: messagesToLogToAnalytics,
           properties: { ...issueProperties, responseGenerated: false, confidenceLevel: confidence, explanation },
           userProperties: userProperties,
+          aiProvidedLinks: (links?.links || []).map((l: any) => ({
+            url: l.url,
+            title: l.title ?? undefined
+          })),
         });
         return;
       }
 
-      // 8) Build the response comment
+      // 9) Build the response comment
       let commentBody = `🤖 Here's a suggested solution:
 
 ${text}`;
+      
+      // Add sources if available
+      if (sourcesSection) {
+        commentBody += sourcesSection;
+      }
+      
       if (confidence === 'very_confident') {
         commentBody += `
 
@@ -293,18 +314,22 @@ ${text}`;
 ---
 _This response was generated by an AI assistant. Please verify it works for your use case._`;
 
-      // 9) Post the comment (respect preview flag)
+      // 10) Post the comment (respect preview flag)
       if (process.env.PREVIEW !== 'false') {
         await context.octokit.issues.createComment(context.issue({ body: commentBody }));
         console.log(`✅ Responded to issue #${number} with confidence '${confidence}'`);
       }
 
-      // 10) Log the assistant’s reply to analytics
+      // 11) Log the assistant's reply to analytics
       messagesToLogToAnalytics.push({ content: text, role: 'assistant' });
       await logToInkeepAnalytics({
         messagesToLogToAnalytics: messagesToLogToAnalytics,
         properties: { ...issueProperties, responseGenerated: true, confidenceLevel: confidence, explanation, commentPosted: true },
         userProperties: userProperties,
+        aiProvidedLinks: (links?.links || []).map((l: any) => ({
+          url: l.url,
+          title: l.title ?? undefined
+        })),
       });
 
     } catch (err: any) {
@@ -324,7 +349,8 @@ _This response was generated by an AI assistant. Please verify it works for your
   userProperties: {
     userId: 'unknown',
     additionalProperties: {}                           // ← must include this
-  }
+  },
+  aiProvidedLinks: [],
 });
         } catch (analyticsErr) {
           console.error('Failed to log error to analytics:', analyticsErr);
@@ -371,18 +397,28 @@ _This response was generated by an AI assistant. Please verify it works for your
     const messagesToLog: Messages[] = [{ content: commentBody, role: 'user' }];
     const issueProps = { issueId: issueNumber, issueTitle: issue.title, repository: repository.full_name, issueUrl: issue.html_url };
     const userProps = { userId: sender.id.toString(), additionalProperties: { username: sender.login, email: sender.email || null, githubUrl: sender.html_url, userType: sender.type } };
-    await logToInkeepAnalytics({ messagesToLogToAnalytics: messagesToLog, properties: { ...issueProps, responseGenerated: false }, userProperties: userProps });
+    // Declare commentLinksForAnalytics as empty before first use
+    const commentLinksForAnalytics: { links?: any[] } = {};
+    await logToInkeepAnalytics({ 
+      messagesToLogToAnalytics: messagesToLog, 
+      properties: { ...issueProps, responseGenerated: false }, 
+      userProperties: userProps, 
+      aiProvidedLinks: (commentLinksForAnalytics?.links || []).map((l: any) => ({
+        url: l.url,
+        title: l.title ?? undefined
+      }))
+    });
 
     // 6) Call the QA routine with full thread context
      if (installationId === undefined) {
     throw new Error("Installation ID is undefined in the event payload.");
   }
-  const inkeepApiKey = await fetchIntegrationApiKey(installationId);
-  const inkeepModel = 'inkeep-qa-expert';
-  const openai = createOpenAI({
-      apiKey: inkeepApiKey,
-      baseURL: 'https://api.inkeep.com/v1'
-    });
+  // const inkeepApiKey = await fetchIntegrationApiKey(installationId);
+  // const inkeepModel = 'inkeep-qa-expert';
+  // const openai = createOpenAI({
+  //     apiKey: inkeepApiKey,
+  //     baseURL: 'https://api.inkeep.com/v1'
+  //   });
       
     console.log("💬 Generating response with full thread context...");
     const { text, toolCalls } = await generateText({
@@ -398,7 +434,17 @@ _This response was generated by an AI assistant. Please verify it works for your
     const explanation = aiAnn?.explanation ?? '';
     console.log(`🎯 Comment on issue #${issueNumber} confidence level: ${confidence}`);
 
-    // 8) Determine whether to respond based on dashboard filter
+    // 8) Extract source links for comments
+    const commentLinks = toolCalls.find(tc => tc.toolName === 'provideLinks')?.args;
+    let commentSourcesSection = '';
+    if (commentLinks?.links && commentLinks.links.length > 0) {
+      commentSourcesSection = `
+
+📚 **Sources:**
+${commentLinks.links.map((link: any, index: number) => `${index + 1}. [${link.title || link.url}](${link.url})`).join('\n')}`;
+    }
+
+    // 9) Determine whether to respond based on dashboard filter
     let shouldRespondComment: boolean;
     shouldRespondComment = true
     if (!shouldRespondComment) {
@@ -409,12 +455,22 @@ _This response was generated by an AI assistant. Please verify it works for your
         messagesToLogToAnalytics: messagesToLog,
         properties: { ...issueProps, responseGenerated: false, confidenceLevel: confidence, explanation },
         userProperties: userProps,
+        aiProvidedLinks: (commentLinks?.links || []).map((l: any) => ({
+          url: l.url,
+          title: l.title ?? undefined
+        })),
       });
       return;
     }
 
-    // 9) Build the reply comment
+    // 10) Build the reply comment
     let replyBody = `🤖 ${text}`;
+    
+    // Add sources if available
+    if (commentSourcesSection) {
+      replyBody += commentSourcesSection;
+    }
+    
     if (confidence === 'very_confident') replyBody += `
 
 ✅ _High confidence response_`;
@@ -429,17 +485,21 @@ _This response was generated by an AI assistant. Please verify it works for your
 ---
 _This response was generated by an AI assistant. Please verify it works for your use case._`;
 
-    // 10) Post the reply comment
+    // 11) Post the reply comment
     await context.octokit.issues.createComment(context.issue({ body: replyBody }));
     console.log(`✅ Replied on issue #${issueNumber} with confidence='${confidence}'`);
 
-    // 11) Log assistant’s reply to analytics
+    // 12) Log assistant's reply to analytics
     messagesToLog.push({ content: text, role: 'assistant' });
     await logToInkeepAnalytics({
    
       messagesToLogToAnalytics: messagesToLog,
       properties: { ...issueProps, responseGenerated: true, confidenceLevel: confidence, explanation, commentPosted: true },
       userProperties: userProps,
+      aiProvidedLinks: (commentLinks?.links || []).map((l: any) => ({
+        url: l.url,
+        title: l.title ?? undefined
+      })),
     });
   });
 };
