@@ -29,6 +29,7 @@ import { logToInkeepAnalytics } from './logToInkeepAnalytics';
 //   if (!adminToken) {
 //     throw new Error('Missing INKEEP_GRAPHQL_ADMIN_TOKEN environment variable');
 //   }
+//
 
   // Execute the query with the admin token in the Authorization header
 //   const response = await graphqlClient
