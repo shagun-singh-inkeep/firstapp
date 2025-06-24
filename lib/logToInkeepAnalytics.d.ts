@@ -1,4 +1,8 @@
-import type { Messages, OpenAIConversation, UserProperties } from '@inkeep/inkeep-analytics/models/components';
+import type { Messages, UserProperties } from '@inkeep/inkeep-analytics/models/components';
+/**
+ * Logs an OpenAI-compatible conversation to Inkeep Analytics.
+ * Requires AUTO_RESPONDER_INKEEP_API_KEY environment variable for authentication.
+ */
 export declare function logToInkeepAnalytics({ messagesToLogToAnalytics, properties, userProperties, conversationId, aiProvidedLinks, }: {
     messagesToLogToAnalytics: Messages[];
     properties?: Record<string, any> | null;
@@ -6,8 +10,6 @@ export declare function logToInkeepAnalytics({ messagesToLogToAnalytics, propert
     conversationId?: string;
     aiProvidedLinks?: {
         url: string;
-        title?: string;
+        title: string;
     }[];
-}): Promise<(OpenAIConversation & {
-    type: 'openai';
-}) | undefined>;
+}): Promise<any | undefined>;
