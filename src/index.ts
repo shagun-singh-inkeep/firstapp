@@ -2,7 +2,7 @@ import { Probot, Context } from "probot";
 import * as dotenv from "dotenv";
 import { createOpenAI } from "@ai-sdk/openai";
 //import { createOpenAI } from "@inkeep/openai";
-//import { Client, cacheExchange, fetchExchange } from '@urql/core';
+import { Client, cacheExchange, fetchExchange } from '@urql/core';
 import { generateText } from "ai";
 import {
   ProvideAIAnnotationsToolSchema,
@@ -13,66 +13,66 @@ import type { Messages, UserProperties } from '@inkeep/inkeep-analytics/models/c
 import { logToInkeepAnalytics } from './logToInkeepAnalytics';
 
  dotenv.config();
-// const graphqlClient = new Client({
-//   url: process.env.GRAPHQL_ENDPOINT ?? (() => { throw new Error("GRAPHQL_ENDPOINT environment variable is not set"); })(),
-//   exchanges: [cacheExchange, fetchExchange],
-//   fetchOptions: () => ({
-//     headers: {
-//       'Authorization': `Bearer ${process.env.GRAPHQL_API_TOKEN}`,
-//       'Content-Type': 'application/json',
-//     },
-//   }),
-// });
-// async function fetchIntegrationApiKey(installationId: number): Promise<string> {
-//   // Ensure we have an admin-level GraphQL token configured
-//   const adminToken = process.env.INKEEP_GRAPHQL_ADMIN_TOKEN;
-//   if (!adminToken) {
-//     throw new Error('Missing INKEEP_GRAPHQL_ADMIN_TOKEN environment variable');
-//   }
-//
+const graphqlClient = new Client({
+  url: process.env.GRAPHQL_ENDPOINT ?? (() => { throw new Error("GRAPHQL_ENDPOINT environment variable is not set"); })(),
+  exchanges: [cacheExchange, fetchExchange],
+  fetchOptions: () => ({
+    headers: {
+      'Authorization': `Bearer ${process.env.GRAPHQL_API_TOKEN}`,
+      'Content-Type': 'application/json',
+    },
+  }),
+});
+async function fetchIntegrationApiKey(installationId: number): Promise<string> {
+  // Ensure we have an admin-level GraphQL token configured
+  const adminToken = process.env.INKEEP_GRAPHQL_ADMIN_TOKEN;
+  if (!adminToken) {
+    throw new Error('Missing INKEEP_GRAPHQL_ADMIN_TOKEN environment variable');
+  }
+
 
   // Execute the query with the admin token in the Authorization header
-//   const response = await graphqlClient
-//     .query(
-//       GET_GITHUB_APP_INTEGRATION_SETTINGS,
-//       { installationId: installationId.toString() },
-//       {
-//         // Override fetchOptions per request
-//         fetchOptions: {
-//           headers: {
-//             Authorization: `Bearer ${adminToken}`,
-//           },
-//         },
-//       }
-//     )
-//     .toPromise();
+  const response = await graphqlClient
+    .query(
+      GET_GITHUB_APP_INTEGRATION_SETTINGS,
+      { installationId: installationId.toString() },
+      {
+        // Override fetchOptions per request
+        fetchOptions: {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+          },
+        },
+      }
+    )
+    .toPromise();
 
 //   // Handle GraphQL authorization errors explicitly
-//   if (response.error) {
-//     const graphQLError = response.error.graphQLErrors?.[0]?.message;
-//     if (graphQLError?.includes('Not authorized')) {
-//       console.error('🚫 Unauthorized: check INKEEP_GRAPHQL_ADMIN_TOKEN permissions');
-//       throw new Error('GraphQL unauthorized: insufficient permissions');
-//     }
-//     console.error('Error fetching integration settings:', response.error);
-//     throw new Error(response.error.message);
-//   }
+  if (response.error) {
+    const graphQLError = response.error.graphQLErrors?.[0]?.message;
+    if (graphQLError?.includes('Not authorized')) {
+      console.error('🚫 Unauthorized: check INKEEP_GRAPHQL_ADMIN_TOKEN permissions');
+      throw new Error('GraphQL unauthorized: insufficient permissions');
+    }
+    console.error('Error fetching integration settings:', response.error);
+    throw new Error(response.error.message);
+  }
 
-//   const apiKey = response.data?.gitHubAppIntegrationSettings?.integration?.apiKey;
-//   if (!apiKey) {
-//     throw new Error('API key not found in GraphQL response');
-//   }
-//   return apiKey;
-// }
-// const GET_GITHUB_APP_INTEGRATION_SETTINGS = `
-//   query GetGitHubAppIntegrationSettings($installationId: ID!) {
-//     gitHubAppIntegrationSettings(input: { installationId: $installationId }) {
-//       integration {
-//         apiKey
-//       }
-//     }
-//   }
-// `;
+  const apiKey = response.data?.gitHubAppIntegrationSettings?.integration?.apiKey;
+  if (!apiKey) {
+    throw new Error('API key not found in GraphQL response');
+  }
+  return apiKey;
+}
+const GET_GITHUB_APP_INTEGRATION_SETTINGS = `
+  query GetGitHubAppIntegrationSettings($installationId: ID!) {
+    gitHubAppIntegrationSettings(input: { installationId: $installationId }) {
+      integration {
+        apiKey
+      }
+    }
+  }
+`;
 // const GET_USER_BY_INSTALLATION_ID = `
 //   query GetUserByInstallationId($installationId: ID!) {
 //     userByInstallationId(installationId: $installationId) {
@@ -160,11 +160,11 @@ import { logToInkeepAnalytics } from './logToInkeepAnalytics';
 // }
 
 export default (app: Probot) => {
-  const inkeepModel = 'inkeep-qa-expert';
-  const openai = createOpenAI({
-    apiKey: process.env.INKEEP_API_KEY,
-    baseURL: 'https://api.inkeep.com/v1'
-  });
+  // const inkeepModel = 'inkeep-qa-expert';
+  // const openai = createOpenAI({
+  //   apiKey: process.env.INKEEP_API_KEY,
+  //   baseURL: 'https://api.inkeep.com/v1'
+  // });
 
   // Dashboard-driven confidence filter: 'all' | 'somewhat_confident' | 'very_confident'
   const confidenceFilter = 'very_confident';
@@ -204,12 +204,12 @@ You are a helpful AI assistant responding to GitHub issues. Your goal is to prov
   if (installationId === undefined) {
     throw new Error("Installation ID is undefined in the event payload.");
   }
-  // const inkeepApiKey = await fetchIntegrationApiKey(installationId);
-  // const inkeepModel = 'inkeep-qa-expert';
-  // const openai = createOpenAI({
-  //     apiKey: inkeepApiKey,
-  //     baseURL: 'https://api.inkeep.com/v1'
-  //   });
+  const inkeepApiKey = await fetchIntegrationApiKey(installationId);
+  const inkeepModel = 'inkeep-qa-expert';
+  const openai = createOpenAI({
+      apiKey: inkeepApiKey,
+      baseURL: 'https://api.inkeep.com/v1'
+    });
       
 
       // Fallback to environment variable if no user data found
@@ -287,7 +287,7 @@ ${links.links.map((link: any, index: number) => `${index + 1}. [${link.title || 
       }
 
       // 9) Build the response comment
-      let commentBody = `🤖 Here's a suggested solution:
+      let commentBody = `Here's a suggested solution:
 
 ${text}`;
       
@@ -537,13 +537,13 @@ app.on("issue_comment.created", async (context: Context<"issue_comment.created">
       // Original issue as first message
       { 
         role: 'user', 
-        content: `${issue.title}\n\n${issue.body || ''}`,
+        message: `${issue.title}\n\n${issue.body || ''}`,
         user: issue.user?.login || 'unknown'
       },
       // All comments in chronological order
       ...allComments.data.map(comment => ({
         role: (comment.user && comment.user.type === 'Bot' ? 'assistant' : 'user') as 'user' | 'assistant',
-        content: comment.body || '',
+        message: comment.body || '',
         user: comment.user?.login || 'unknown'
       }))
     ];
@@ -587,6 +587,20 @@ ${JSON.stringify(fullThreadMessages)}
         userType: sender.type 
       } 
     };
+      const installationId = context.payload.installation?.id;
+
+
+    if (installationId === undefined) {
+      throw new Error("Installation ID is undefined in the event payload.");
+    }
+    
+        const inkeepApiKey = await fetchIntegrationApiKey(installationId);
+    const inkeepModel = 'inkeep-qa-expert';
+    const openai = createOpenAI({
+        apiKey: inkeepApiKey,
+        baseURL: 'https://api.inkeep.com/v1'
+      });
+      
 
     // Generate AI response using thread context
     const { text, toolCalls } = await generateText({
@@ -641,14 +655,14 @@ ${JSON.stringify(fullThreadMessages)}
     // Log the ENTIRE THREAD plus the new bot response to analytics
     // Convert to the Messages format expected by logToInkeepAnalytics
     const messagesToLogToAnalytics: Messages[] = [
-      // Convert full thread to Messages format
-      ...fullThreadMessages.map(msg => ({
-        role: (msg.role === 'user' || msg.role === 'assistant' || msg.role === 'system' ? msg.role : 'user') as 'user' | 'assistant' | 'system',
-        content: msg.content
-      })),
-      // Add the bot's response
-      { role: 'assistant', content: text }
-    ];
+        {
+          role: 'user', content: [
+            { type: 'text', text: threadHistoryContext },
+            { type: 'text', text: commentBody }
+          ]
+        },
+        { role: 'assistant', content: text }
+      ];
 
     console.log(`📊 Logging ${messagesToLogToAnalytics.length} messages to analytics...`);
 
